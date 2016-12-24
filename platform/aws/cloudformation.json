@@ -8,7 +8,7 @@
 		},
 		"DestinationBucketName": {
 			"Type": "String",
-			"Description": "The S3 source bucket"
+			"Description": "The S3 destination bucket"
 		},
 		"LambdaS3Bucket": {
 			"Type": "String",
