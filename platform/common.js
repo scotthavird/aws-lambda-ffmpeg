@@ -14,6 +14,23 @@ const tempDir = process.env['TEMP'] || tmpdir();
 const config = require(process.env.CONFIG_FILE || './config.json');
 
 /**
+ * The main handler for the AWS Lambda Function
+ *
+ * @param {Object} event - The S3 Event
+ * @param {Object} context - The Lambda context
+ * @param {requestCallback} callback
+ */
+export function handler(event, context, callback) {
+	console.log(`Reading options from event:\n${inspect(event, {depth: 5})}`);
+
+	main(lib, console, {
+		event: event,
+		context: context,
+		callback: callback
+	});
+}
+
+/**
  * Downloads the file to the local temp directory
  *
  * @param {!function} downloadFunc - The platform library's download function
@@ -256,7 +273,7 @@ function uploadFiles(uploadFunc, logger, keyPrefix) {
  *     callback: !function
  * }} invocation - The invocation
  */
-export function main(library, logger, invocation) {
+function main(library, logger, invocation) {
 	const sourceLocation = library.getFileLocation(invocation.event);
 	const keyPrefix = sourceLocation.key.replace(/\.[^/.]+$/, '');
 	const localFilePath = join(tempDir, 'download');

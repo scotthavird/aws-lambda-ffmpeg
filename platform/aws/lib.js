@@ -1,4 +1,5 @@
 process.env['PATH'] += ':' + process.env['LAMBDA_TASK_ROOT'];
+process.env.NODE_CONFIG_DIR = process.env["LAMBDA_TASK_ROOT"];
 
 import {S3} from 'aws-sdk';
 
