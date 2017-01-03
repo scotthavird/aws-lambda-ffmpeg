@@ -121,8 +121,8 @@
 						"Arn"
 					]
 				},
-				"Timeout": 30,
-				"Handler": "aws/index.handler",
+				"Timeout": 120,
+				"Handler": "index.handler",
 				"Runtime": "nodejs4.3",
 				"MemorySize": 1536
 			}
