@@ -11,7 +11,7 @@ import * as lib from './lib.js';
  */
 export function handler(event, context, callback) {
 	console.log(`Reading options from event:\n${inspect(event, {depth: 5})}`);
-
+	//console.log('Start handler');
 	main(lib, console, {
 		event: event,
 		context: context,

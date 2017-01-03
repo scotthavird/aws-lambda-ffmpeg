@@ -262,7 +262,7 @@ export function main(library, logger, invocation) {
 	const localFilePath = join(tempDir, 'download');
 
 	downloadFile(library.getDownloadStream, logger, sourceLocation, localFilePath)
-		.then(() => checkM3u(localFilePath))
+		//.then(() => checkM3u(localFilePath))
 		.then(() => ffprobe(logger))
 		.then(() => ffmpeg(logger, keyPrefix))
 		.then(() => removeDownload(logger, localFilePath))

@@ -37,7 +37,7 @@ gulp.task('download-ffmpeg', cb => {
 
 // Resorting to using a shell task. Tried a number of other things including
 // LZMA-native, node-xz, decompress-tarxz. None of them work very well with this.
-// This will probably work well for OS X and Linux, but maybe not Windows without Cygwin.
+// This will probably work well for OS X and Linux, but maybe not Windows without Cygwin. change
 gulp.task('untar-ffmpeg', shell.task([
 	`tar -xvf ${filename} -C ./build`
 ]));
@@ -80,6 +80,7 @@ gulp.task('npm', () => gulp
 );
 
 // Now the dist directory is ready to go. Zip it.
+//.pipe(chmod(555))
 gulp.task('zip', () => gulp
 	.src([
 		'dist/**/*',
@@ -88,7 +89,7 @@ gulp.task('zip', () => gulp
 		'!**/*.md',
 		'dist/.*'
 	])
-	.pipe(chmod(555))
+	.pipe(chmod(777))
 	.pipe(zip('dist.zip'))
 	.pipe(gulp.dest('./'))
 );
