@@ -3,7 +3,7 @@
 process.env['NODE_ENV'] = 'production';
 
 import {spawn, execFile} from 'child_process';
-import {unlinkSync, createReadStream, createWriteStream} from 'fs';
+import {unlinkSync, createReadStream, createWriteStream, readdir} from 'fs';
 import {createGzip, Z_BEST_COMPRESSION} from 'zlib';
 import {join} from 'path';
 import {tmpdir} from 'os';
@@ -80,6 +80,36 @@ function ffprobe(logger) {
 
 		execFile('ffprobe', args, opts, cb)
 			.on('error', reject);
+	});
+}
+
+/**
+ * Runs the FFmpeg executable
+ *
+ * @param {!{log: !function}} logger - The platform logger
+ * @param {string} keyPrefix - The prefix for the key (filename minus extension)
+ * @returns {Promise}
+ */
+function ffmpegScreenshots(logger, keyPrefix) {
+	logger.log('Starting FFmpeg Screenshots');
+
+	return new Promise((resolve, reject) => {
+		const args = [
+			'-y',
+			'-loglevel', 'warning',
+			'-i', 'download',		
+			'-c:a', 'copy',	
+			'-vf', 'fps=1',			
+			`%dout.${config.format.image.extension}`
+		];
+		const opts = {
+			cwd: tempDir
+		};
+		
+		spawn('ffmpeg', args, opts)
+			.on('message', msg => logger.log(msg))
+			.on('error', reject)
+			.on('close', resolve);
 	});
 }
 
@@ -167,6 +197,14 @@ function encode(logger, filename, gzip, rmFiles) {
 	});
 }
 
+function encodeScreenshot(logger, filename) {
+	logger.log('encodeScreenshot');
+	return new Promise((resolve) => {
+		const readStream = createReadStream(filename);
+		return resolve(readStream);
+	});
+}
+
 /**
  * Uploads the file
  *
@@ -226,6 +264,38 @@ function uploadFile(uploadFunc, logger, keyPrefix, type) {
 		.then(() => removeFiles(logger, filename, rmFiles));
 }
 
+function uploadScreenshotFile(uploadFunc, logger, keyPrefix, filename) {
+	
+	const rmFiles = [filename];
+
+	return encodeScreenshot(logger, filename, config.gzip, rmFiles)
+		.then(fileStream => upload(
+			logger,
+			uploadFunc,
+			fileStream,
+			config.destinationBucket,
+			filename,
+			config.gzip ? 'gzip' : null,
+			'image/png'
+		))
+		.then(() => removeFiles(logger, filename, rmFiles));
+
+/*
+	return encodeScreenshot(logger, filename)
+		.then(fileStream => upload(
+			logger,
+			uploadFunc,
+			fileStream,
+			config.destinationBucket,
+			keyPrefix + '.' + format.extension,
+			config.gzip ? 'gzip' : null,
+			format.mimeType
+		))
+		.then(() => removeFiles(logger, filename, rmFiles));
+*/
+
+}
+
 /**
  * Uploads the output files
  *
@@ -235,12 +305,54 @@ function uploadFile(uploadFunc, logger, keyPrefix, type) {
  * @returns {Promise}
  */
 function uploadFiles(uploadFunc, logger, keyPrefix) {
+
+	logger.log('start uploadFiles');
 	return Promise
 		.all(Object
 			.keys(config.format)
 			.map(type => uploadFile(uploadFunc, logger, keyPrefix, type))
 		);
 }
+
+/**
+ * Uploads the output files
+ *
+ * @param {!function} uploadFunc - The function to upload a processed file
+ * @param {!{log: !function}} logger - The platform logger
+ * @param {!string} keyPrefix - The prefix for the key (filename minus extension)
+ * @returns {Promise}
+ */
+function uploadScreenshotFiles(uploadFunc, logger, keyPrefix) {
+
+	var arrayOrFiles;
+	readdir(tempDir, function(err, items) {
+		arrayOrFiles = items;
+		logger.log(items);
+	});
+/*
+	var p3 = new Promise((resolve, reject) => {
+		readdir(tempDir, function(err, items) {
+			arrayOrFiles = items;
+			logger.log(items);
+		});
+	}); 
+*/
+
+	logger.log('arrayOrFiles ' + arrayOrFiles);
+	return Promise
+		.all(arrayOrFiles			
+			.map(filename => uploadScreenshotFile(uploadFunc, logger, keyPrefix, filename))
+		);
+	
+	/*
+	return Promise
+		.all(Object
+			.keys(config.format)
+			.map(type => uploadScreenshotFile(uploadFunc, logger, keyPrefix, type))
+		);
+	*/
+}
+
 
 /**
  * The main function
@@ -265,8 +377,10 @@ export function main(library, logger, invocation) {
 		//.then(() => checkM3u(localFilePath))
 		.then(() => ffprobe(logger))
 		.then(() => ffmpeg(logger, keyPrefix))
+		.then(() => ffmpegScreenshots(logger, keyPrefix))		
 		.then(() => removeDownload(logger, localFilePath))
 		.then(() => uploadFiles(library.uploadToBucket, logger, keyPrefix))
+		.then(() => uploadScreenshotFiles(library.uploadToBucket, logger, keyPrefix))
 		.then(data => invocation.callback())
 		.catch(error => invocation.callback(error));
 };
